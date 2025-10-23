@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartCart Grocery Shop</title>
+<style>
+body { font-family: Arial; margin:0; background:#f4f6f8; color:#333; }
+
+/* Header styling */
+header {
+    background:#27ae60;
+    padding:1rem;
+    color:white;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:0.5rem;
+}
+
+/* Title on the left */
+header div { font-weight:bold; font-size:1.2rem; }
+
+/* Search input */
+header input {
+    padding:0.5rem;
+    border-radius:4px;
+    border:none;
+    width:200px;
+}
+
+/* Center buttons container */
+.center-buttons {
+    display:flex;
+    gap:0.5rem;
+    margin: 0 auto;
+}
+
+/* Header buttons */
+.header-btn {
+    padding:0.5rem 1rem;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:0.9rem;
+    transition: all 0.3s;
+}
+
+/* Cart button */
+#cartBtn { background: #3498db; color: white; }
+#cartBtn:hover { background: #2980b9; }
+
+/* Logout button */
+#logoutBtn { background: #e74c3c; color: white; }
+#logoutBtn:hover { background: #c0392b; }
+
+/* Main section */
+main { display:flex; gap:1rem; padding:1rem; }
+.products { flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; }
+
+/* Product card */
+.card { background:white; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); overflow:hidden; display:flex; flex-direction:column; }
+.card img { width:100%; height:140px; object-fit:cover; background:#eee; }
+.card .info { padding:0.5rem; flex:1; display:flex; flex-direction:column; justify-content:space-between; }
+.add-btn,.qty-controls { margin-top:auto; background:#27ae60; color:white; border:none; padding:0.5rem; border-radius:4px; cursor:pointer; text-align:center; }
+.qty-controls { display:flex; justify-content:space-between; align-items:center; background:white; border:2px solid #27ae60; color:#27ae60; font-weight:bold; }
+.qty-controls button { border:none; background:none; color:#27ae60; font-size:1.2rem; cursor:pointer; padding:0 0.5rem; }
+
+/* Cart panel */
+.cart { position:fixed; top:0; right:-350px; width:350px; height:100%; background:white; box-shadow:-2px 0 6px rgba(0,0,0,0.2); padding:1rem; transition:right 0.3s; overflow-y:auto; display:flex; flex-direction:column; }
+.cart.open { right:0; }
+.cart-item { display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #eee; }
+.cart button { margin-top:0.5rem; padding:0.5rem; border:none; border-radius:4px; cursor:pointer; }
+.back-btn { background:#ccc; color:#333; }
+.checkout-btn { background:#27ae60; color:white; }
+
+/* Recommendations */
+#recommendations div { margin-bottom:1rem; padding:0.5rem; border:1px solid #ddd; border-radius:6px; display:flex; align-items:center; gap:0.5rem; }
+#recommendations img { width:50px; height:50px; object-fit:cover; border-radius:4px; }
+.rec-qty-controls { display:flex; justify-content:space-between; align-items:center; width:100px; border:2px solid #27ae60; color:#27ae60; font-weight:bold; border-radius:4px; padding:0 5px; margin-top:5px; }
+.rec-qty-controls button { border:none; background:none; color:#27ae60; font-size:1rem; cursor:pointer; padding:0 5px; }
+
+/* Footer */
+footer { text-align:center; padding:1rem; font-size:0.8rem; color:#777; }
+
+/* Notification */
+#notification { position:fixed; top:10px; left:50%; transform:translateX(-50%); background:#27ae60; color:white; padding:0.5rem 1rem; border-radius:4px; display:none; z-index:1000; }
+</style>
+</head>
+<body>
+
+<div id="notification"></div>
+
+<header>
+  <div><strong>SmartCart</strong> Grocery</div>
+  <input type="text" id="search" placeholder="Search...">
+  <div class="center-buttons">
+    <button id="cartBtn" class="header-btn">Cart (0)</button>
+    <button id="logoutBtn" class="header-btn">Logout</button>
+  </div>
+</header>
+
+<main>
+  <section class="products" id="productList"></section>
+</main>
+
+<div id="cartPanel" class="cart"></div>
+
+<footer>SmartCart • Behaviour-Based Recommendations Demo</footer>
+
+<script>
+// ---------------- Notification ----------------
+function showNotification(msg, duration=2000){
+    const notif = document.getElementById("notification");
+    notif.innerText = msg;
+    notif.style.display = "block";
+    setTimeout(()=>{ notif.style.display="none"; }, duration);
+}
+
+// ---------------- JWT Validation ----------------
+const token = localStorage.getItem("token");
+if(!token){ 
+    showNotification("Please login!"); 
+    setTimeout(()=> window.location.href="/login", 2000);
+}
+
+// ---------------- Products ----------------
+const products = [
+  {id:"1",name:"Fish",category:"Seafood",price:300,image:"fish.jpg"},
+  {id:"2",name:"Salt",category:"Spices",price:20,image:"salt.jpg"},
+  {id:"3",name:"Biscuit",category:"Snacks",price:50,image:"biscuit.jpg"},
+  {id:"4",name:"Chicken",category:"Meat",price:250,image:"chicken.jpg"},
+  {id:"5",name:"Butter",category:"Dairy",price:120,image:"butter.jpg"},
+  {id:"6",name:"Lays",category:"Snacks",price:60,image:"lays.jpg"},
+  {id:"7",name:"Oil",category:"Cooking",price:180,image:"oil.jpg"},
+  {id:"8",name:"Coke",category:"Beverages",price:40,image:"coke.jpg"},
+  {id:"9",name:"Paneer",category:"Dairy",price:200,image:"paneer.jpg"},
+  {id:"10",name:"Sugar",category:"Staples",price:50,image:"sugar.jpg"},
+  {id:"11",name:"Wheat Flour",category:"Staples",price:90,image:"wheatflour.jpg"},
+  {id:"12",name:"Horlicks",category:"Beverages",price:250,image:"horlicks.jpg"},
+  {id:"13",name:"Milk",category:"Dairy",price:50,image:"milk.jpg"},
+  {id:"14",name:"Bread",category:"Bakery",price:40,image:"bread.jpg"},
+  {id:"15",name:"Pepsi",category:"Beverages",price:40,image:"pepsi.jpg"},
+  {id:"16",name:"Red Chili Powder",category:"Spices",price:30,image:"redchilipowder.jpg"},
+  {id:"17",name:"Rice",category:"Staples",price:120,image:"rice.jpg"},
+  {id:"18",name:"Eggs",category:"Dairy",price:60,image:"eggs.jpg"},
+  {id:"19",name:"Boost",category:"Beverages",price:250,image:"boost.jpg"},
+  {id:"20",name:"Turmeric Powder",category:"Spices",price:30,image:"turmericpowder.jpg"}
+];
+
+let cart = {}, behaviour = {}, tempRecs = {};
+
+// ---------------- Render Products ----------------
+function renderProducts(list){
+  const container = document.getElementById("productList");
+  container.innerHTML = "";
+  list.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <img src="static/images/${p.image}" alt="${p.name}">
+      <div class="info">
+        <h4>${p.name}</h4>
+        <p>₹${p.price}</p>
+        <div class="action" id="action-${p.id}">
+          <button class="add-btn">Add</button>
+        </div>
+      </div>
+    `;
+    card.querySelector(".add-btn").onclick = () => { addToCart(p); updateActionUI(p); };
+    container.appendChild(card);
+    updateActionUI(p);
+  });
+}
+renderProducts(products);
+
+// ---------------- Cart Functions ----------------
+function addToCart(p){ 
+    cart[p.id]=(cart[p.id]||0)+1; 
+    updateCartButton(); 
+    updateActionUI(p); 
+    renderCartContent(); 
+    recordBehaviour(p);
+}
+function removeFromCart(p){ 
+    if(cart[p.id]){ 
+        cart[p.id]--; 
+        if(cart[p.id]===0) delete cart[p.id]; 
+        renderCartContent(); 
+    } 
+    updateCartButton(); 
+}
+function updateActionUI(p){
+  const action=document.getElementById(`action-${p.id}`); 
+  if(!action) return;
+  if(!cart[p.id]){
+    action.innerHTML=`<button class="add-btn">Add</button>`;
+    action.querySelector("button").onclick=()=>{ addToCart(p); updateActionUI(p); };
+  } else {
+    action.innerHTML=`<div class="qty-controls">
+      <button onclick="removeFromCart(products.find(x=>x.id==='${p.id}'))">-</button>
+      ${cart[p.id]}
+      <button onclick="addToCart(products.find(x=>x.id==='${p.id}'))">+</button>
+    </div>`;
+  }
+}
+function updateCartButton(){ 
+    document.getElementById("cartBtn").innerText=`Cart (${Object.values(cart).reduce((a,b)=>a+b,0)})`; 
+}
+
+function openCart(){ document.getElementById("cartPanel").classList.add("open"); renderCartContent(); }
+function closeCart(){ const c=document.getElementById("cartPanel"); c.classList.remove("open"); c.innerHTML=""; }
+
+// ---------------- Logout ----------------
+document.getElementById("logoutBtn").onclick = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_name");
+    window.location.href = "/logout";
+};
+
+// ---------------- Search ----------------
+document.getElementById("cartBtn").onclick = openCart;
+document.getElementById("search").oninput = (e) => {
+    const q = e.target.value.toLowerCase();
+    renderProducts(products.filter(p=>p.name.toLowerCase().includes(q)));
+};
+
+// ---------------- Recommendations ----------------
+async function updateRecommendations(){
+  const recDiv=document.getElementById("recommendations"); 
+  if(!recDiv) return;
+  const current_order = Object.keys(cart).map(id => { let p=products.find(p=>p.id===id)||tempRecs[id]; return p? p.name : id; });
+  const customer_name = localStorage.getItem("user_name") || "Guest";
+
+  try{
+    const res = await fetch("http://127.0.0.1:5000/recommendations", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({customer_name,current_order})
+    });
+    const data = await res.json();
+    recDiv.innerHTML="";
+    if(!data.missed_products || data.missed_products.length===0){ recDiv.innerText="No missed products!"; return; }
+
+    data.missed_products.forEach(p=>{
+      let prod = products.find(x=>x.name===p.name);
+      if(!prod){ prod={id:`rec-${p.name}`, ...p}; tempRecs[prod.id]=prod; }
+
+      const div=document.createElement("div"); 
+      div.innerHTML=`<img src="static/images/${prod.image}"><div><strong>${prod.name}</strong> - ₹${prod.price}</div>`;
+      const controls=document.createElement("div"); controls.className="rec-qty-controls";
+      const minus=document.createElement("button"); minus.innerText="-";
+      const plus=document.createElement("button"); plus.innerText="+";
+      const qty=document.createElement("span"); qty.innerText=cart[prod.id]||0;
+
+      const updateQty=()=>{ qty.innerText=cart[prod.id]||0; updateCartButton(); renderCartContent(); };
+      minus.onclick=()=>{ if(cart[prod.id]){ cart[prod.id]--; if(cart[prod.id]<=0) delete cart[prod.id]; updateQty(); } };
+      plus.onclick=()=>{ cart[prod.id]=(cart[prod.id]||0)+1; updateQty(); };
+
+      controls.append(minus,qty,plus);
+      div.appendChild(controls);
+      recDiv.appendChild(div);
+    });
+  } catch { recDiv.innerText="Error fetching recommendations."; }
+}
+
+// ---------------- Record Behaviour ----------------
+function recordBehaviour(p){ behaviour[p.id] = (behaviour[p.id]||0)+1; updateRecommendations(); }
+
+// ---------------- Cart Rendering ----------------
+function renderCartContent(){
+  const c=document.getElementById("cartPanel"); 
+  c.innerHTML="";
+  const itemsDiv=document.createElement("div"); 
+  let total=0;
+
+  if(Object.keys(cart).length===0) { itemsDiv.innerHTML="<p>Your cart is empty.</p>"; }
+  else{
+    Object.entries(cart).forEach(([id,qty])=>{
+      let prod = products.find(p=>p.id===id) || tempRecs[id];
+      if(!prod) return;
+
+      const div=document.createElement("div"); div.className="cart-item";
+      const info=document.createElement("span"); info.innerText=`${prod.name} × ${qty} = ₹${prod.price*qty}`;
+
+      const controls=document.createElement("div"); controls.className="rec-qty-controls";
+      const minus=document.createElement("button"); minus.innerText="-";
+      const plus=document.createElement("button"); plus.innerText="+";
+      const q=document.createElement("span"); q.innerText=qty;
+      const updateQty=()=>{ q.innerText=cart[prod.id]||0; updateCartButton(); renderCartContent(); };
+      minus.onclick=()=>{ if(cart[prod.id]){ cart[prod.id]--; if(cart[prod.id]<=0) delete cart[prod.id]; updateQty(); } };
+      plus.onclick=()=>{ cart[prod.id]=(cart[prod.id]||0)+1; updateQty(); };
+
+      controls.append(minus,q,plus);
+      div.append(info,controls);
+      itemsDiv.appendChild(div);
+
+      total+=prod.price*qty;
+    });
+  }
+
+  const totalP=document.createElement("p");
+  totalP.id="cartTotal"; totalP.innerText=`Total: ₹${total}`;
+  const backBtn=document.createElement("button"); backBtn.className="back-btn"; backBtn.innerText="Back"; backBtn.onclick=closeCart;
+  const checkoutBtn=document.createElement("button"); checkoutBtn.className="checkout-btn"; checkoutBtn.innerText="Checkout";
+
+  checkoutBtn.onclick = async () => {
+      if(Object.keys(cart).length === 0){
+          showNotification("Cart is empty!");
+          return;
+      }
+      const productsToSend = Object.entries(cart).map(([id,qty])=>{
+          let p = products.find(x=>x.id===id)||tempRecs[id];
+          return {name:p.name, price:p.price, qty:qty};
+      });
+
+      try{
+          const res = await fetch("http://127.0.0.1:5000/place_order", {
+              method:"POST",
+              headers: { "Content-Type":"application/json" },
+              body: JSON.stringify({ items: productsToSend })
+          });
+          const data = await res.json();
+          if(res.ok){
+              showNotification(data.message || "Your order has been placed successfully!");
+              cart = {};
+              updateCartButton();
+              renderCartContent();
+          } else {
+              showNotification("Error placing order: "+(data.message || data.error));
+          }
+      } catch(err){
+          showNotification("Error placing order. Please try again.");
+          console.error(err);
+      }
+  };
+
+  const recTitle=document.createElement("h3"); recTitle.innerText="Recommended for you";
+  const recDiv=document.createElement("div"); recDiv.id="recommendations";
+
+  c.append(itemsDiv,totalP,backBtn,checkoutBtn,recTitle,recDiv);
+  updateRecommendations();
+}
+</script>
+</body>
+</html>

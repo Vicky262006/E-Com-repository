@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<style>
+  body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 0; }
+
+  /* Header layout */
+  .header { position: relative; height: 70px; background: #e74c3c; color: white; display: flex; align-items: center; justify-content: center; }
+  
+  .header h2 { margin: 0; text-align: center; font-size: 1.5rem; }
+
+  .header button { position: absolute; top: 50%; transform: translateY(-50%); padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background: white; color: #e74c3c; font-weight: bold; }
+
+  #addAdminBtn { left: 20px; }
+  #logoutBtn { right: 20px; }
+
+  /* Center container */
+  .container { display: flex; justify-content: center; align-items: center; height: calc(100vh - 70px); }
+  .container button { padding: 1rem 2rem; font-size: 1.2rem; border: none; border-radius: 6px; cursor: pointer; background: #e74c3c; color: white; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button id="addAdminBtn">Add New Admin</button>
+  <h2>Welcome Vikram</h2>
+  <button id="logoutBtn">Logout</button>
+</div>
+
+<div class="container">
+  <button id="salesGraphBtn">Show Sales Graph</button>
+</div>
+
+<script>
+document.getElementById("addAdminBtn").addEventListener("click", () => {
+  window.location.href = "/add_admin_page";
+});
+
+document.getElementById("salesGraphBtn").addEventListener("click", () => {
+  window.location.href = "/sales_graph";
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("adminToken");
+  window.location.href = "/admin_login_page";
+});
+</script>
+
+</body>
+</html>
